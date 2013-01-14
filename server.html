@@ -1,0 +1,85 @@
+<html>
+<head>
+<title>Hello</title>
+<style>
+
+.fill {
+    width: 100%;
+    height: 100%;
+}
+
+table {
+    border-collapse: collapse;
+}
+th, td {
+    padding: 0;
+}
+
+</style>
+</head>
+<body>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.2/underscore-min.js"></script>
+<script src="https://raw.github.com/dglittle/myutil/master/myutil2.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+
+$(function () {
+    var body = $('body')
+    var w = body.width()
+    var h = body.height();
+    var c = $('<canvas/>').attr('width', w).attr('height', h)
+    body.append(c)
+    var g = c.get()[0].getContext("2d")
+
+    var lastTime = 0
+    var lastEeg = 0
+
+    function getX(time) {
+        return _.lerp(0, 0, 3000, w, time % 3000)
+    }
+
+    function getY(eeg) {
+        return _.lerp(0, h / 2, 1000, h, eeg)
+    }
+
+    var socket = io.connect(document.location)
+    socket.on('msg', function (data) {
+        var now = _.time()
+        var eegs = []
+        data.replace(/"rawEeg":(-?\d+)/g, function (g0, g1) {
+            eegs.push(parseInt(g1))
+            return g0
+        })
+        eegs = _.map(eegs, function (eeg, i) {
+            return {
+                eeg : eeg,
+                time : _.lerp(-1, lastTime, eegs.length - 1, now, i)
+            }
+        })
+        _.each(eegs, function (eeg) {
+            var x1 = getX(lastTime)
+            var x2 = getX(eeg.time)
+
+            if (x1 > x2) {
+                g.fillStyle = 'rgba(255, 255, 255, .9)'
+                g.fillRect(0, 0, w, h)
+                x1 = 0
+            }
+
+            g.beginPath()
+            g.moveTo(x1, getY(lastEeg))
+            g.lineTo(x2, getY(eeg.eeg))
+            g.lineWidth = 1
+            g.strokeStyle = 'black'
+            g.stroke()
+            lastTime = eeg.time
+            lastEeg = eeg.eeg
+        })
+    });
+})
+
+</script>
+
+</body>
+</html>

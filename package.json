@@ -5,6 +5,8 @@
   "private": true,
   "dependencies": {
   	"fibers" : "*",
-  	"underscore" : "*"
+  	"underscore" : "*",
+  	"express" : "*",
+  	"socket.io" : "*"
   }
 }
