@@ -1,0 +1,109 @@
+<html>
+<head>
+<title>Display Data</title>
+<style>
+
+.fill {
+    width: 100%;
+    height: 100%;
+}
+
+table {
+    border-collapse: collapse;
+}
+th, td {
+    padding: 0;
+}
+
+</style>
+</head>
+<body>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.2/underscore-min.js"></script>
+<script src="https://raw.github.com/dglittle/myutil/master/myutil2.js"></script>
+<script>
+
+var data = [
+    {
+        note : null,
+        time : 1358049653275,
+        amSamples : [
+            [0, 50, 0],
+            [30, 25, 50],
+            [60, 100, 0]
+        ],
+        eegPowerMeans : {"delta":262262,"theta":176839,"lowAlpha":38126,"highAlpha":15125,"lowBeta":11513,"highBeta":5866,"lowGamma":7905,"highGamma":4969}
+    },
+    {
+        note : "special note taken just for me",
+        time : 1358049653275,
+        amSamples : [
+            [0, 50, 0],
+            [30, 25, 50],
+            [60, 100, 0]
+        ],
+        eegPowerMeans : {"delta":45142,"theta":4847,"lowAlpha":3724,"highAlpha":1266,"lowBeta":1460,"highBeta":1309,"lowGamma":853,"highGamma":452}
+    }
+]
+
+// XXX-SET-DATA-XXX
+
+function drawAMChart(data) {
+    var w = 400
+    var h = 150
+    var div = $('<div style="margin-top:20px"/>')
+    div.append($('<div/>').text("" + new Date(data.time)))
+    if (data.note) {
+        div.append($('<div/>').text("note: " + data.note))
+    }
+    div.append($('<div style="clear:both"/>'))
+    var left = $('<div style="float:left"/>')
+    var c = $('<canvas style="border:1px solid black;display:block"/>').attr('width', w).attr('height', h)
+    left.append(c)
+    var g = c.get()[0].getContext("2d")
+
+    var maxX = data.amSamples[data.amSamples.length - 1][0]
+    var maxY = 100
+    g.setTransform(w / maxX, 0, 0, -h / maxY, 0, h)
+
+    function drawLine(name, col, color) {
+        g.beginPath()
+        g.moveTo(0, 0)
+        var sum = 0
+        _.each(data.amSamples, function (s, i) {
+            var x = s[0]
+            var y = s[col]
+            sum += y
+            g.lineTo(x, y)
+        })
+        g.lineTo(maxX, 0)
+        g.lineTo(0, 0)
+        g.fillStyle = color
+        g.fill()
+
+        left.append($('<span style="margin-right:20px"/>').css('color', color).text('avg ' + name + ' = ' + (sum / data.amSamples.length).toFixed(3)))
+    }
+    drawLine('attention', 1, "rgba(255,0,0,.5)")
+    drawLine('meditation', 2, "rgba(0,0,255,.5)")
+
+    var right = $('<div style="float:left"/>')
+    _.each(data.eegPowerMeans, function (v, k) {
+        right.append($('<div style="margin-right:20px"/>').css('color', 'black').text(k + ' = ' + v.toFixed(3)))
+    })
+
+    div.append(left)
+    div.append(right)
+    div.append($('<div style="clear:both"/>'))
+    return div
+}
+
+$(function () {
+    _.each(data, function (d) {
+        $('body').append(drawAMChart(d))
+    })
+})
+
+</script>
+
+</body>
+</html>

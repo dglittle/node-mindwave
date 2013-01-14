@@ -8,31 +8,47 @@ var net = require('net')
 _.run(function () {
 	eval(_.wget('https://raw.github.com/dglittle/myutil/master/myutil2.js'))
 
-	var samples = _.unJson(fs.readFileSync('./output.txt'))
-
-	var os = []
-	_.each(samples, function (s) {
-		if (s.json.match(/eSense/)) {
-			var o = {
-				time : s.time
+	var template = "" + fs.readFileSync('./display_template.html')
+	var data = []
+	var files = fs.readdirSync('./recordings')
+	files = _.sortBy(_.filter(files, function (f) { return f.match(/^time_/) }), function (f) { return 1 * f.match(/\d+/)[0] })
+	_.each(files, function (f) {
+		var s = "" + fs.readFileSync('./recordings/' + f)
+		var t = null
+		var note = null
+		var startTime = null
+		var amSamples = []
+		var eegPowerMeans = {}
+		_.each(_.lines(s), function (line) {
+			try {
+				var j = _.unJson(line)
+				if (j.note) {
+					note = j.note
+				} else if (j.time) {
+					if (amSamples.length == 0) startTime = j.time
+					t = j.time - startTime
+				} else if (j.eSense) {
+					amSamples.push([t, j.eSense.attention, j.eSense.meditation])
+					_.each(j.eegPower, function (v, k) {
+						eegPowerMeans[k] = _.ensure(eegPowerMeans, k, 0) + j.eegPower[k]
+					})
+				}
+			} catch (e) {
+				if (line.match(/\S/)) {
+					console.log("couldn't parse: " + line)
+				}
 			}
-			s.json.replace(/"(\w+)":(\d+)[,|\}]/g, function (_0, key, val) {
-				o[key] = val
-			})
-			os.push(o)
-		}
+		})
+		_.each(eegPowerMeans, function (v, k) {
+			eegPowerMeans[k] /= amSamples.length
+		})
+		data.push({
+			note : note,
+			time : startTime,
+			amSamples : amSamples,
+			eegPowerMeans : eegPowerMeans
+		})
 	})
-
-	fs.writeFileSync('./output2.txt', _.json(os, true))
-
-	function extractFeature(os, feature) {
-		var startTime = os[0].time
-		fs.writeFileSync('./' + feature + '.txt', _.map(_.filter(os, function (o) {
-			return o[feature]
-		}), function (o) {
-			return (o.time - startTime) / 1000 + '\t' + o[feature]
-		}).join('\n'))
-	}
-	extractFeature(os, 'attention')
-	extractFeature(os, 'meditation')
+	template = template.replace(/\/\/ XXX-SET-DATA-XXX/, 'var data = ' + _.json(data, true))
+	fs.writeFileSync('./display_generated.html', template)
 })

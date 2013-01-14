@@ -43,6 +43,7 @@ _.promise = function () {
             while (!done) {
                 yield()
             }
+            done = false
             return val
         }
     }
